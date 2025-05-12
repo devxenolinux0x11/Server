@@ -1,50 +1,63 @@
 name: Ubuntu VM with GUI
 
-on: push
+on: push  # Trigger the workflow on every push to the repository
 
 env:
-  TZ: "UTC"
+  TZ: "UTC"  # Set the timezone to UTC
 
 jobs:
   build-and-run-gui:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Specifies the Ubuntu runner
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-      
-      # Install Docker
-      - name: Install Docker
+        uses: actions/checkout@v3  # Check out the repository code
+
+      - name: Install System Update Tools
+        run: |
+          sudo apt-get update  # Update the package list
+          sudo apt-get install -y curl  # Install curl for potential dependencies
+
+      - name: Install GUI and Related Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl enable docker
-          sudo systemctl start docker
-          docker --version
-      
-      # Set up Docker permissions
-      - name: Set up Docker permissions
-        run: |
-          sudo usermod -aG docker $USER
-          newgrp docker
-      
-      # Install required tools (e.g., X display server for GUI)
-      - name: Install X display server
-        run: |
           sudo apt-get install -y xserver-xorg xterm
-          sudo bash -c "echo 'export DISPLAY=:0' >> /etc/profile"
-          sudo bash -c "echo 'Xorg /usr/share/X11/xorg.conf.d Duck.FloatTensor' >> /etc/X11/xorg.conf"
+          sudo apt-get install -y x11-utils x11-apps
+          sudo apt-get install -y xdg-utils
+          sudo apt-get install -y gnome-shell  # Install a desktop environment
+
+      - name: Configure X Display Server
+        run: |
+          # Create a configuration file for X display server
+          sudo nano /etc/X11/xorg.conf.d/99-display-manager.conf
+          # Add the following lines to the new file:
+          # Section "DRI"
+          #    Mode    "strict"
+          # EndSection
+          # Save and exit
+
+      - name: Set Up Display Environment Variables
+        run: |
+          # Set the display environment variables
+          echo "export DISPLAY=:0" >> ~/.bashrc
+          echo "export XAUTHORITY=/tmp/.X11-unix/X AUTHORITY" >> ~/.bashrc
+
+      - name: Start the X Display Server
+        run: |
+          # Start the X server
           startx &
-      
-      # Run a GUI application (e.g., a simple browser)
-      - name: Run browser in Docker
+          # Wait a few seconds for the server to start
+          sleep 5
+
+      - name: Run GUI Application
         run: |
-          docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --net host -it ubuntu:latest /bin/bash -c "|
-            apt-get update && 
-            apt-get install -y chromium-browser && 
-            chromium-browser --no-sandbox"
-      
-      # Optional: Run your custom GUI application here
-      - name: Run custom GUI application
+          # Replace this with your actual GUI application command
+          # For example, to run a simple X terminal:
+          xterm &
+          # Or to run a graphical web browser:
+          # google-chrome --no-sandbox
+
+      - name: (Optional) Install Additional GUI Applications
+        if: startsWith(github.ref, 'refs/heads/main')
         run: |
-          # Replace this with your GUI application commands
-          echo "Running custom GUI application..."
+          # Install additional GUI applications if needed
+          sudo apt-get install -y firefox thunderbird
