@@ -1,0 +1,53 @@
+name: Windows RDP with NoVNC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp-with-novnc:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install necessary packages
+        run: |
+          # Install chocolatey packages or any other necessary installations
+          # For this example, let's install TightVNC which includes a server and viewer
+          Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          choco install tightvnc -y
+
+      - name: Configure and start TightVNC Server
+        run: |
+          # Configure TightVNC Server (example, might need adjustments)
+          # For a real setup, you should secure your VNC server with a strong password
+          # Start the TightVNC server
+          # Assuming default installation path and configuring a password
+          echo "password" | "C:\Program Files\TightVNC\tvnserver.exe" -install
+          "C:\Program Files\TightVNC\tvnserver.exe" -start
+          # Set a password for the VNC server (example, not secure)
+          # You would typically use the GUI or other methods to set this securely
+
+      - name: Setup NoVNC
+        run: |
+          # Download and configure NoVNC
+          git clone https://github.com/novnc/noVNC.git
+          cd noVNC
+          # For simplicity, this step assumes using utils/launch.sh is not directly applicable on Windows
+          # You might need a different approach or tooling for Windows, like using Websockify via Python or Docker (if supported)
+          # For a real implementation, you'd need to adapt this to a Windows-compatible solution
+
+      - name: Run NoVNC (Windows adaptation required)
+        run: |
+          # Since we're on Windows, directly running noVNC might require a different approach
+          # Consider using websockify via Python or a similar workaround
+          echo "Running NoVNC (simulated, actual command may vary)"
+          # Example using Python's websockify (you need to install Python and websockify first)
+          # pip install websockify
+          # websockify 6080 localhost:5900
+
+      - name: Connect to NoVNC
+        run: |
+          echo "To connect, use a VNC client or access NoVNC via a web browser at http://localhost:6080/vnc.html (or the appropriate URL)"
+          # Keep the workflow running to maintain the session
+          while ($true) { Start-Sleep -Seconds 60 }
