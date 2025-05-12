@@ -1,45 +1,50 @@
-name: Windows RDP with NoVNC
+name: Ubuntu VM with GUI
 
-on:
-  workflow_dispatch:
+on: push
+
+env:
+  TZ: "UTC"
 
 jobs:
-  rdp-with-novnc:
-    runs-on: windows-latest
+  build-and-run-gui:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install necessary packages
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      # Install Docker
+      - name: Install Docker
         run: |
-          choco install tightvnc --force --yes
-
-      - name: Configure and start TightVNC Server
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl enable docker
+          sudo systemctl start docker
+          docker --version
+      
+      # Set up Docker permissions
+      - name: Set up Docker permissions
         run: |
-          $password = "yourpassword"
-          $vncpasswd = "${password}"
-          $vncpasswd += "`0"
-          $vncpasswd | Out-File -Encoding ASCII -FilePath vncpasswd.txt
-          & "C:\Program Files\TightVNC\tvnserver.exe" -install
-          & "C:\Program Files\TightVNC\tvnserver.exe" -start
-          & "C:\Program Files\TightVNC\tvncpasswd.exe" -f vncpasswd.txt
-          Remove-Item -Path vncpasswd.txt
-
-      - name: Setup NoVNC
+          sudo usermod -aG docker $USER
+          newgrp docker
+      
+      # Install required tools (e.g., X display server for GUI)
+      - name: Install X display server
         run: |
-          git clone https://github.com/novnc/noVNC.git
-          cd noVNC
-          npm install
-          npm run build
-
-      - name: Run NoVNC (websockify)
+          sudo apt-get install -y xserver-xorg xterm
+          sudo bash -c "echo 'export DISPLAY=:0' >> /etc/profile"
+          sudo bash -c "echo 'Xorg /usr/share/X11/xorg.conf.d Duck.FloatTensor' >> /etc/X11/xorg.conf"
+          startx &
+      
+      # Run a GUI application (e.g., a simple browser)
+      - name: Run browser in Docker
         run: |
-          pip install websockify
-          websockify 6080 localhost:5900 &
-          Start-Process -FilePath "C:\Program Files\TightVNC\tvnviewer.exe" -ArgumentList "localhost:5900" -WindowStyle Hidden
-
-      - name: Keep the session alive
+          docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --net host -it ubuntu:latest /bin/bash -c "|
+            apt-get update && 
+            apt-get install -y chromium-browser && 
+            chromium-browser --no-sandbox"
+      
+      # Optional: Run your custom GUI application here
+      - name: Run custom GUI application
         run: |
-          while ($true) {
-            Start-Sleep -Seconds 60
-          }
+          # Replace this with your GUI application commands
+          echo "Running custom GUI application..."
