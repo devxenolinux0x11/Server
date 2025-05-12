@@ -1,63 +1,32 @@
 name: Ubuntu VM with GUI
 
-on: push  # Trigger the workflow on every push to the repository
-
-env:
-  TZ: "UTC"  # Set the timezone to UTC
+on: push  # Trigger on every push
 
 jobs:
   build-and-run-gui:
-    runs-on: ubuntu-latest  # Specifies the Ubuntu runner
+    name: Run Ubuntu with GUI
+    runs-on: ubuntu-latest  # Use GitHub-hosted Ubuntu runner
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3  # Check out the repository code
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Build Docker Image
+      id: build
+      run: |
+        docker build -t ubuntu-gui .  # Build the Docker image
+        
+    - name: Run GUI Application
+      run: |
+        docker run -it --rm \
+          --privileged \
+          --net host \
+          --env="DISPLAY=$DISPLAY" \
+          --env="XAUTHORITY=$XAUTHORITY" \
+          --volume="/tmp/.X11-unix:/tmp/.X11-unix" \
+          ubuntu-gui  # Replace with your Docker image name
 
-      - name: Install System Update Tools
-        run: |
-          sudo apt-get update  # Update the package list
-          sudo apt-get install -y curl  # Install curl for potential dependencies
-
-      - name: Install GUI and Related Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xserver-xorg xterm
-          sudo apt-get install -y x11-utils x11-apps
-          sudo apt-get install -y xdg-utils
-          sudo apt-get install -y gnome-shell  # Install a desktop environment
-
-      - name: Configure X Display Server
-        run: |
-          # Create a configuration file for X display server
-          sudo nano /etc/X11/xorg.conf.d/99-display-manager.conf
-          # Add the following lines to the new file:
-          # Section "DRI"
-          #    Mode    "strict"
-          # EndSection
-          # Save and exit
-
-      - name: Set Up Display Environment Variables
-        run: |
-          # Set the display environment variables
-          echo "export DISPLAY=:0" >> ~/.bashrc
-          echo "export XAUTHORITY=/tmp/.X11-unix/X AUTHORITY" >> ~/.bashrc
-
-      - name: Start the X Display Server
-        run: |
-          # Start the X server
-          startx &
-          # Wait a few seconds for the server to start
-          sleep 5
-
-      - name: Run GUI Application
-        run: |
-          # Replace this with your actual GUI application command
-          # For example, to run a simple X terminal:
-          xterm &
-          # Or to run a graphical web browser:
-          # google-chrome --no-sandbox
-
-      - name: (Optional) Install Additional GUI Applications
-        if: startsWith(github.ref, 'refs/heads/main')
-        run: |
-          # Install additional GUI applications if needed
-          sudo apt-get install -y firefox thunderbird
+    - name: Install Additional GUI Applications (Optional)
+      run: |
+        docker exec -it $(docker ps -lq) \
+          apt-get install -y --no-install-recommends firefox  # Install additional apps if needed
